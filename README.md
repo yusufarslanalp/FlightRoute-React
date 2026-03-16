@@ -5,7 +5,7 @@
 
 #  BE
 - This project use an API implemented by spring boot.
-- spring boot api repository: https://github.com/yusufarslanalp/SkyRoute
+- spring boot api repository: https://github.com/yusufarslanalp/FlightRoute
 
 
 # Screen Shoots
