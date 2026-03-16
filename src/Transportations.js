@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from './apiClient';
 
 const Transportations = () => {
   const [locations, setLocations] = useState([]);
@@ -23,11 +23,11 @@ const Transportations = () => {
   });
 
   useEffect(() => {
-    axios.get('http://localhost:8080/location')
+    apiClient.get('/location')
       .then((response) => setLocations(response.data))
       .catch((error) => console.error('Error fetching locations:', error));
 
-    axios.get('http://localhost:8080/transportation')
+    apiClient.get('/transportation')
       .then((response) => setTransportations(response.data))
       .catch((error) => console.error('Error fetching transportations:', error));
   }, []);
@@ -38,7 +38,7 @@ const Transportations = () => {
     
     const transportationData = { fromId, toId, type, days: selectedDaysList };
     
-    axios.post('http://localhost:8080/transportation', transportationData)
+    apiClient.post('/transportation', transportationData)
       .then((response) => {
         setTransportations([...transportations, response.data]);
       })
@@ -53,7 +53,7 @@ const Transportations = () => {
 
   const handleUpdate = () => {
     const updatedData = { type };
-    axios.put(`http://localhost:8080/transportation/${editTransportation.id}`, updatedData)
+    apiClient.put(`/transportation/${editTransportation.id}`, updatedData)
       .then((response) => {
         setTransportations(transportations.map((t) => t.id === response.data.id ? { ...t, ...response.data } : t));
         setIsEditModalOpen(false);
@@ -66,7 +66,7 @@ const Transportations = () => {
   };
 
   const handleDelete = (id) => {
-    axios.delete(`http://localhost:8080/transportation/${id}`)
+    apiClient.delete(`/transportation/${id}`)
       .then(() => {
         setTransportations(transportations.filter((transportation) => transportation.id !== id));
       })

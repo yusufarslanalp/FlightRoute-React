@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from './apiClient';
 
 const RoutesPage = () => {
   const [origin, setOrigin] = useState('');
@@ -9,8 +9,8 @@ const RoutesPage = () => {
   const [locations, setLocations] = useState([]);
 
   useEffect(() => {
-    axios
-      .get('http://localhost:8080/location')
+    apiClient
+      .get('/location')
       .then((response) => {
         setLocations(response.data);
       })
@@ -22,8 +22,8 @@ const RoutesPage = () => {
   const handleSearch = () => {
     console.log(`Searching for routes from ${origin} to ${destination}`);
     
-    axios
-      .get(`http://localhost:8080/route?fromId=${origin}&toId=${destination}`)
+    apiClient
+      .get(`/route?fromId=${origin}&toId=${destination}`)
       .then((response) => {
         setFlightRoutes(response.data);
       })

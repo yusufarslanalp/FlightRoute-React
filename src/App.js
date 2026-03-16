@@ -1,10 +1,11 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import './App.css';
 import Navbar from './Navbar';
 import RoutesPage from './RoutesPage';
 import Locations from './Locations';
 import Transportations from './Transportations';
+import Login from './Login';
 
 const App = () => {
   return (
@@ -23,6 +24,8 @@ const App = () => {
           
           <div style={{ width: '80%', padding: '10px' }}>
             <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/routes-page" element={<RoutesPage />} />
               <Route path="/locations" element={<Locations />} />
               <Route path="/transportations" element={<Transportations />} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from './apiClient';
 
 const Locations = () => {
   const [name, setName] = useState('');
@@ -11,8 +11,8 @@ const Locations = () => {
   const [selectedLocation, setSelectedLocation] = useState(null);
 
   useEffect(() => {
-    axios
-      .get('http://localhost:8080/location')
+    apiClient
+      .get('/location')
       .then((response) => {
         setLocations(response.data);
       })
@@ -29,8 +29,8 @@ const Locations = () => {
       locationCode,
     };
 
-    axios
-      .post('http://localhost:8080/location', newLocation)
+    apiClient
+      .post('/location', newLocation)
       .then((response) => {
         console.log('Location created successfully:', response.data);
         setLocations([...locations, response.data]);
@@ -55,8 +55,8 @@ const Locations = () => {
   };
 
   const handleDelete = (id) => {
-    axios
-      .delete(`http://localhost:8080/location/${id}`)
+    apiClient
+      .delete(`/location/${id}`)
       .then((response) => {
         console.log('Location deleted:', response.data);
         setLocations(locations.filter((location) => location.id !== id));
@@ -75,8 +75,8 @@ const Locations = () => {
       locationCode,
     };
 
-    axios
-      .put('http://localhost:8080/location', updatedLocation)
+    apiClient
+      .put('/location', updatedLocation)
       .then((response) => {
         console.log('Location updated successfully:', response.data);
         setLocations(
