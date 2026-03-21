@@ -1,19 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const Navbar = () => {
+const PAGE_NAV_CONFIG = [
+  { pageName: 'ROUTES', label: 'Routes', to: '/routes-page' },
+  { pageName: 'LOCATIONS', label: 'Locations', to: '/locations' },
+  { pageName: 'TRANSPORTATIONS', label: 'Transportations', to: '/transportations' },
+];
+
+const Navbar = ({ allowedPages }) => {
   return (
     <nav>
       <ul style={{ listStyleType: 'none', padding: 0 }}>
-        <li style={{ margin: '10px 0' }}>
-          <Link to="/routes-page">Routes</Link>
-        </li>
-        <li style={{ margin: '10px 0' }}>
-          <Link to="/locations">Locations</Link>
-        </li>
-        <li style={{ margin: '10px 0' }}>
-          <Link to="/transportations">Transportations</Link>
-        </li>
+        {PAGE_NAV_CONFIG.filter(item => allowedPages.includes(item.pageName)).map(item => (
+          <li key={item.pageName} style={{ margin: '10px 0' }}>
+            <Link to={item.to}>{item.label}</Link>
+          </li>
+        ))}
       </ul>
     </nav>
   );

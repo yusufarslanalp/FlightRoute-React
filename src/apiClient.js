@@ -12,10 +12,12 @@ export const setAuthToken = (token) => {
   }
 };
 
-const existingToken = localStorage.getItem('jwtToken');
-if (existingToken) {
-  setAuthToken(existingToken);
-}
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('jwtToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export default apiClient;
-
