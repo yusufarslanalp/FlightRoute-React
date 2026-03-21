@@ -31,112 +31,154 @@ const RoutesPage = () => {
   };
 
   const handleMapClick = (flightRoute) => {
-    const start = flightRoute.transportations[0]?.from?.name || '';
-    const mid = flightRoute.transportations[0]?.to?.name || '';
-    const end =
-      flightRoute.transportations[1]?.to?.name ||
-      flightRoute.transportations[0]?.to?.name ||
-      '';
-
-    const popup = window.open('', 'RouteMap', 'width=900,height=600');
+    // Build ordered stop list: first transportation's `from`, then every `to`
+    const stops = [];
+    flightRoute.transportations.forEach((t, i) => {
+      if (i === 0) stops.push(t.from?.name || '');
+      stops.push(t.to?.name || '');
+    });
+  
+    // Transport type per leg (index i = leg from stops[i] → stops[i+1])
+    const legTypes = flightRoute.transportations.map((t) => t.type || '');
+  
+    const popup = window.open('', 'RouteMap', 'width=900,height=650');
     if (!popup) return;
-
+  
+    const inputsHtml = stops
+      .map(
+        (name, i) =>
+          `<div style="display:flex;align-items:center;margin:4px 0;">
+            <span style="width:24px;font-weight:bold;color:#555;">${String.fromCharCode(65 + i)}</span>
+            <input id="stop_${i}" value="${name}" placeholder="Location ${String.fromCharCode(65 + i)}"
+              style="padding:8px;margin:0 5px;width:220px;border:1px solid #ccc;border-radius:4px;" />
+          </div>`
+      )
+      .join('');
+  
     popup.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Route Finder: Road + Plane</title>
+        <title>Route Map</title>
         <style>
-          #map { height: 500px; width: 100%; }
-          body { font-family: Arial; padding: 20px; }
-          input { padding: 8px; margin: 5px; width: 200px; }
-          button { padding: 8px 15px; }
+          #map { height: 460px; width: 100%; margin-top: 12px; border-radius: 8px; }
+          body { font-family: Arial; padding: 16px; background: #f5f5f5; }
+          h2 { margin: 0 0 12px; font-size: 16px; color: #333; }
+          button { padding: 8px 18px; background: #2196F3; color: #fff; border: none;
+                   border-radius: 4px; cursor: pointer; margin-top: 8px; font-size: 14px; }
+          button:hover { background: #1976D2; }
         </style>
       </head>
       <body>
-        <h2>Route Finder: A → B (Car) + B → C (Plane)</h2>
-        <input id="start" value="${start}" placeholder="Start location (A)">
-        <input id="mid" value="${mid}" placeholder="Mid location (B)">
-        <input id="end" value="${end}" placeholder="End location (C)">
-        <button onclick="calculateRoute()">Go</button>
+        <h2>Route Map (${stops.length} stops)</h2>
+        ${inputsHtml}
         <div id="map"></div>
-
+  
         <script>
-          let map;
-          let directionsService;
-          let directionsRenderer;
-          let planeLine;
-
-          window.initMap = function() {
-            map = new google.maps.Map(document.getElementById("map"), {
+          const STOP_COUNT = ${stops.length};
+          const LEG_TYPES = ${JSON.stringify(legTypes)};
+          let map, geocoder;
+          const drawnPolylines = [];
+          const drawnMarkers = [];
+  
+          window.initMap = function () {
+            map = new google.maps.Map(document.getElementById('map'), {
               center: { lat: 41.0082, lng: 28.9784 },
-              zoom: 4
+              zoom: 4,
             });
-            directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer({ suppressPolylines: false });
-            directionsRenderer.setMap(map);
+            geocoder = new google.maps.Geocoder();
+            calculateRoute();
           };
-
-          function drawPlaneRoute(startLatLng, endLatLng) {
-            const latMid = (startLatLng.lat() + endLatLng.lat()) / 2 + 5;
-            const lngMid = (startLatLng.lng() + endLatLng.lng()) / 2;
-            const planePath = new google.maps.Polyline({
-              path: [startLatLng, { lat: latMid, lng: lngMid }, endLatLng],
-              geodesic: true,
-              strokeColor: "#FF0000",
-              strokeOpacity: 0.8,
-              strokeWeight: 3,
-              icons: [{
-                icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW },
-                offset: '100%'
-              }]
-            });
-            planePath.setMap(map);
-            return planePath;
+  
+          function clearMap() {
+            drawnPolylines.forEach(p => p.setMap(null));
+            drawnPolylines.length = 0;
+            drawnMarkers.forEach(m => m.setMap(null));
+            drawnMarkers.length = 0;
           }
-
-          function calculateRoute() {
-            const start = document.getElementById("start").value;
-            const mid = document.getElementById("mid").value;
-            const end = document.getElementById("end").value;
-
-            if (!start || !mid || !end) { alert("Please enter all three locations!"); return; }
-
-            directionsService.route({ origin: start, destination: mid, travelMode: 'DRIVING' },
-              (result, status) => {
-                if (status === 'OK') {
-                  directionsRenderer.setDirections(result);
-
-                  const geocoder = new google.maps.Geocoder();
-                  geocoder.geocode({ address: end }, (endResults, status2) => {
-                    if (status2 === 'OK') {
-                      const midLatLng = result.routes[0].legs[0].end_location;
-                      const endLatLng = endResults[0].geometry.location;
-                      if (planeLine) planeLine.setMap(null);
-                      planeLine = drawPlaneRoute(midLatLng, endLatLng);
-
-                      const bounds = new google.maps.LatLngBounds();
-                      bounds.extend(result.routes[0].legs[0].start_location);
-                      bounds.extend(endLatLng);
-                      map.fitBounds(bounds);
-                    } else { alert('Could not find location C: ' + status2); }
-                  });
-
-                } else { alert('Error with driving route: ' + status); }
+  
+          function getStopValues() {
+            const vals = [];
+            for (let i = 0; i < STOP_COUNT; i++) {
+              vals.push(document.getElementById('stop_' + i).value.trim());
+            }
+            return vals;
+          }
+  
+          function geocodeAddress(address) {
+            return new Promise((resolve, reject) => {
+              geocoder.geocode({ address }, (results, status) => {
+                if (status === 'OK') resolve(results[0].geometry.location);
+                else reject(new Error('Could not find: ' + address + ' (' + status + ')'));
               });
+            });
           }
-
-          // Optional: auto-run the route immediately
+  
+          function isFlightLeg(type) {
+            return type && type.toUpperCase().includes('FLIGHT');
+          }
+  
+          function drawLeg(from, to, type) {
+            const flight = isFlightLeg(type);
+            const path = flight
+              ? [from, { lat: (from.lat() + to.lat()) / 2 + 4, lng: (from.lng() + to.lng()) / 2 }, to]
+              : [from, to];
+            const poly = new google.maps.Polyline({
+              path,
+              geodesic: true,
+              strokeColor: flight ? '#E53935' : '#1E88E5',
+              strokeOpacity: 0.85,
+              strokeWeight: flight ? 2 : 4,
+              icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3 }, offset: '100%' }],
+            });
+            poly.setMap(map);
+            drawnPolylines.push(poly);
+          }
+  
+          function placeMarker(latLng, label) {
+            const marker = new google.maps.Marker({
+              position: latLng,
+              map,
+              label: { text: label, color: '#fff', fontWeight: 'bold' },
+              title: label,
+            });
+            drawnMarkers.push(marker);
+          }
+  
+          async function calculateRoute() {
+            clearMap();
+            const stopValues = getStopValues();
+            if (stopValues.some(v => !v)) { alert('Please fill in all location fields.'); return; }
+  
+            try {
+              const latLngs = await Promise.all(stopValues.map(geocodeAddress));
+              const bounds = new google.maps.LatLngBounds();
+  
+              latLngs.forEach((ll, i) => {
+                bounds.extend(ll);
+                placeMarker(ll, String.fromCharCode(65 + i));
+              });
+  
+              for (let i = 0; i < latLngs.length - 1; i++) {
+                drawLeg(latLngs[i], latLngs[i + 1], LEG_TYPES[i]);
+              }
+  
+              map.fitBounds(bounds);
+            } catch (err) {
+              alert(err.message);
+            }
+          }
+  
           window.onload = calculateRoute;
         </script>
-
+  
         <script async
           src="https://maps.googleapis.com/maps/api/js?key=API_KEY&libraries=geometry&callback=initMap">
         </script>
       </body>
       </html>
     `);
-
+  
     popup.document.close();
   };
 
