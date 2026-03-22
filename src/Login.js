@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient, { setAuthToken } from './apiClient';
+import ErrorDisplay from './ErrorDisplay';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setValidationErrors([]);
 
     if (!username || !password) {
       setError('Please enter both username and password.');
@@ -35,15 +38,24 @@ const Login = () => {
       navigate('/routes-page');
     } catch (err) {
       console.error('Login error:', err);
-      setError('Login failed. Please check your credentials and try again.');
+      if (err.formattedValidationErrors) {
+        setValidationErrors(err.formattedValidationErrors);
+      } else {
+        setError('Login failed. Please check your credentials and try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const clearValidationErrors = () => {
+    setValidationErrors([]);
+  };
+
   return (
     <div style={{ margin: '40px auto', maxWidth: '400px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
       <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Login</h2>
+      <ErrorDisplay errors={validationErrors} onDismiss={clearValidationErrors} />
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
           <label htmlFor="username" style={{ display: 'block', marginBottom: '5px' }}>

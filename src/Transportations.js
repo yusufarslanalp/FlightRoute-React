@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from './apiClient';
+import ErrorDisplay from './ErrorDisplay';
 
 const Transportations = () => {
   const [locations, setLocations] = useState([]);
@@ -7,6 +8,7 @@ const Transportations = () => {
   const [toId, setToId] = useState(null);
   const [type, setType] = useState('');
   const [transportations, setTransportations] = useState([]);
+  const [errors, setErrors] = useState([]);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editTransportation, setEditTransportation] = useState(null);
@@ -33,6 +35,10 @@ const Transportations = () => {
       .catch((error) => console.error('Error fetching transportations:', error));
   }, []);
 
+  const clearErrors = () => {
+    setErrors([]);
+  };
+
   const handleCreate = () => {
     const selectedDaysList = Object.keys(selectedDays).filter((day) => selectedDays[day]);
     const transportationData = { fromId, toId, type, days: selectedDaysList };
@@ -41,7 +47,12 @@ const Transportations = () => {
       .then((response) => {
         setTransportations([...transportations, response.data]);
       })
-      .catch((error) => console.error('Error creating transportation:', error));
+      .catch((error) => {
+        console.error('Error creating transportation:', error);
+        if (error.formattedValidationErrors) {
+          setErrors(error.formattedValidationErrors);
+        }
+      });
   };
 
   const handleEdit = (id) => {
@@ -70,11 +81,17 @@ const Transportations = () => {
         ));
         setIsEditModalOpen(false);
       })
-      .catch((error) => console.error('Error updating transportation:', error));
+      .catch((error) => {
+        console.error('Error updating transportation:', error);
+        if (error.formattedValidationErrors) {
+          setErrors(error.formattedValidationErrors);
+        }
+      });
   };
 
   const handleCancel = () => {
     setIsEditModalOpen(false);
+    clearErrors();
   };
 
   const handleDelete = (id) => {
@@ -94,6 +111,7 @@ const Transportations = () => {
 
   return (
     <div style={{ margin: '20px' }}>
+      <ErrorDisplay errors={errors} onDismiss={clearErrors} />
       <h3>Transportation Creation</h3>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
         <label htmlFor="from" style={{ marginRight: '10px' }}>From</label>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from './apiClient';
+import ErrorDisplay from './ErrorDisplay';
 
 const Locations = () => {
   const [name, setName] = useState('');
@@ -9,6 +10,7 @@ const Locations = () => {
   const [locations, setLocations] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [errors, setErrors] = useState([]);
 
   useEffect(() => {
     apiClient
@@ -41,6 +43,9 @@ const Locations = () => {
       })
       .catch((error) => {
         console.error('Error creating location:', error);
+        if (error.formattedValidationErrors) {
+          setErrors(error.formattedValidationErrors);
+        }
       });
   };
 
@@ -88,7 +93,14 @@ const Locations = () => {
       })
       .catch((error) => {
         console.error('Error updating location:', error);
+        if (error.formattedValidationErrors) {
+          setErrors(error.formattedValidationErrors);
+        }
       });
+  };
+
+  const clearErrors = () => {
+    setErrors([]);
   };
 
   const closeModal = () => {
@@ -98,10 +110,12 @@ const Locations = () => {
     setCountry('');
     setCity('');
     setLocationCode('');
+    clearErrors();
   };
 
   return (
     <div style={{ margin: '20px' }}>
+      <ErrorDisplay errors={errors} onDismiss={clearErrors} />
       <h3>Create New Location</h3>
 
       <div style={{ display: 'flex', marginBottom: '20px' }}>
