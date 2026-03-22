@@ -5,7 +5,7 @@ import { FaMapMarkedAlt } from 'react-icons/fa'; // Map icon
 const RoutesPage = () => {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
-  const [flightRoutes, setFlightRoutes] = useState([]);
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);  const [flightRoutes, setFlightRoutes] = useState([]);
   const [expandedFlightRouteId, setExpandedFlightRouteId] = useState(null);
   const [locations, setLocations] = useState([]);
 
@@ -18,7 +18,7 @@ const RoutesPage = () => {
 
   const handleSearch = () => {
     apiClient
-      .get(`/route?fromId=${origin}&toId=${destination}`)
+      .get(`/route?fromId=${origin}&toId=${destination}&date=${date}`)
       .then((response) => setFlightRoutes(response.data))
       .catch((error) => {
         console.error('Error fetching routes:', error);
@@ -31,19 +31,17 @@ const RoutesPage = () => {
   };
 
   const handleMapClick = (flightRoute) => {
-    // Build ordered stop list: first transportation's `from`, then every `to`
     const stops = [];
     flightRoute.transportations.forEach((t, i) => {
       if (i === 0) stops.push(t.from?.name || '');
       stops.push(t.to?.name || '');
     });
-  
-    // Transport type per leg (index i = leg from stops[i] → stops[i+1])
+
     const legTypes = flightRoute.transportations.map((t) => t.type || '');
-  
+
     const popup = window.open('', 'RouteMap', 'width=900,height=650');
     if (!popup) return;
-  
+
     const inputsHtml = stops
       .map(
         (name, i) =>
@@ -54,7 +52,7 @@ const RoutesPage = () => {
           </div>`
       )
       .join('');
-  
+
     popup.document.write(`
       <!DOCTYPE html>
       <html>
@@ -73,14 +71,14 @@ const RoutesPage = () => {
         <h2>Route Map (${stops.length} stops)</h2>
         ${inputsHtml}
         <div id="map"></div>
-  
+
         <script>
           const STOP_COUNT = ${stops.length};
           const LEG_TYPES = ${JSON.stringify(legTypes)};
           let map, geocoder;
           const drawnPolylines = [];
           const drawnMarkers = [];
-  
+
           window.initMap = function () {
             map = new google.maps.Map(document.getElementById('map'), {
               center: { lat: 41.0082, lng: 28.9784 },
@@ -89,14 +87,14 @@ const RoutesPage = () => {
             geocoder = new google.maps.Geocoder();
             calculateRoute();
           };
-  
+
           function clearMap() {
             drawnPolylines.forEach(p => p.setMap(null));
             drawnPolylines.length = 0;
             drawnMarkers.forEach(m => m.setMap(null));
             drawnMarkers.length = 0;
           }
-  
+
           function getStopValues() {
             const vals = [];
             for (let i = 0; i < STOP_COUNT; i++) {
@@ -104,7 +102,7 @@ const RoutesPage = () => {
             }
             return vals;
           }
-  
+
           function geocodeAddress(address) {
             return new Promise((resolve, reject) => {
               geocoder.geocode({ address }, (results, status) => {
@@ -113,11 +111,11 @@ const RoutesPage = () => {
               });
             });
           }
-  
+
           function isFlightLeg(type) {
             return type && type.toUpperCase().includes('FLIGHT');
           }
-  
+
           function drawLeg(from, to, type) {
             const flight = isFlightLeg(type);
             const path = flight
@@ -134,7 +132,7 @@ const RoutesPage = () => {
             poly.setMap(map);
             drawnPolylines.push(poly);
           }
-  
+
           function placeMarker(latLng, label) {
             const marker = new google.maps.Marker({
               position: latLng,
@@ -144,41 +142,41 @@ const RoutesPage = () => {
             });
             drawnMarkers.push(marker);
           }
-  
+
           async function calculateRoute() {
             clearMap();
             const stopValues = getStopValues();
             if (stopValues.some(v => !v)) { alert('Please fill in all location fields.'); return; }
-  
+
             try {
               const latLngs = await Promise.all(stopValues.map(geocodeAddress));
               const bounds = new google.maps.LatLngBounds();
-  
+
               latLngs.forEach((ll, i) => {
                 bounds.extend(ll);
                 placeMarker(ll, String.fromCharCode(65 + i));
               });
-  
+
               for (let i = 0; i < latLngs.length - 1; i++) {
                 drawLeg(latLngs[i], latLngs[i + 1], LEG_TYPES[i]);
               }
-  
+
               map.fitBounds(bounds);
             } catch (err) {
               alert(err.message);
             }
           }
-  
+
           window.onload = calculateRoute;
         </script>
-  
+
         <script async
           src="https://maps.googleapis.com/maps/api/js?key=API_KEY&libraries=geometry&callback=initMap">
         </script>
       </body>
       </html>
     `);
-  
+
     popup.document.close();
   };
 
@@ -199,6 +197,15 @@ const RoutesPage = () => {
           <option value="">Select Destination</option>
           {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
         </select>
+
+        <label htmlFor="date" style={{ marginRight: '10px' }}>Date</label>
+        <input
+          id="date"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          style={{ padding: '5px', marginRight: '20px' }}
+        />
 
         <button onClick={handleSearch} style={{
           padding: '5px 15px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer'

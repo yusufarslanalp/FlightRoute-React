@@ -11,7 +11,8 @@ const Transportations = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editTransportation, setEditTransportation] = useState(null);
 
-  // State to store selected days
+  const ALL_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
   const [selectedDays, setSelectedDays] = useState({
     MONDAY: true,
     TUESDAY: true,
@@ -33,9 +34,7 @@ const Transportations = () => {
   }, []);
 
   const handleCreate = () => {
-    // Collect the days selected by the user
     const selectedDaysList = Object.keys(selectedDays).filter((day) => selectedDays[day]);
-    
     const transportationData = { fromId, toId, type, days: selectedDaysList };
     
     apiClient.post('/transportation', transportationData)
@@ -48,14 +47,27 @@ const Transportations = () => {
   const handleEdit = (id) => {
     const transportationToEdit = transportations.find((t) => t.id === id);
     setEditTransportation(transportationToEdit);
+    setType(transportationToEdit.type);
+
+    const daysMap = {
+      MONDAY: false, TUESDAY: false, WEDNESDAY: false, THURSDAY: false,
+      FRIDAY: false, SATURDAY: false, SUNDAY: false,
+    };
+    transportationToEdit.days.forEach((day) => { daysMap[day] = true; });
+    setSelectedDays(daysMap);
+
     setIsEditModalOpen(true);
   };
 
   const handleUpdate = () => {
-    const updatedData = { type };
+    const selectedDaysList = Object.keys(selectedDays).filter((day) => selectedDays[day]);
+    const updatedData = { type, days: selectedDaysList };
+
     apiClient.put(`/transportation/${editTransportation.id}`, updatedData)
       .then((response) => {
-        setTransportations(transportations.map((t) => t.id === response.data.id ? { ...t, ...response.data } : t));
+        setTransportations(transportations.map((t) =>
+          t.id === editTransportation.id ? { ...t, ...response.data } : t
+        ));
         setIsEditModalOpen(false);
       })
       .catch((error) => console.error('Error updating transportation:', error));
@@ -127,7 +139,7 @@ const Transportations = () => {
 
       {/* Checkbox row for days of the week */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-        {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map((day) => (
+        {ALL_DAYS.map((day) => (
           <div key={day} style={{ marginRight: '15px' }}>
             <input
               type="checkbox"
@@ -163,6 +175,7 @@ const Transportations = () => {
             <th>From</th>
             <th>To</th>
             <th>Type</th>
+            <th>Days</th>
             <th></th>
           </tr>
         </thead>
@@ -170,9 +183,10 @@ const Transportations = () => {
           {transportations.map((transportation) => (
             <tr key={transportation.id}>
               <td>{transportation.id}</td>
-              <td>{transportation.from.name}</td>
-              <td>{transportation.to.name}</td>
+              <td>{transportation.from}</td>
+              <td>{transportation.to}</td>
               <td>{transportation.type}</td>
+              <td>{transportation.days.map((d) => d.slice(0, 3)).join(', ')}</td>
               <td>
                 <button
                   onClick={() => handleEdit(transportation.id)}
@@ -194,31 +208,31 @@ const Transportations = () => {
 
       {isEditModalOpen && (
         <div style={{ position: 'fixed', top: '0', left: '0', right: '0', bottom: '0', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '5px' }}>
+          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '5px', minWidth: '360px' }}>
             <h3>Edit Transportation</h3>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <label htmlFor="from">From</label>
+              <label htmlFor="edit-from">From</label>
               <input
-                id="from"
-                value={editTransportation ? editTransportation.from.name : ''}
+                id="edit-from"
+                value={editTransportation ? editTransportation.from : ''}
                 readOnly
                 style={{ padding: '5px', marginBottom: '10px', backgroundColor: '#f0f0f0' }}
               />
 
-              <label htmlFor="to">To</label>
+              <label htmlFor="edit-to">To</label>
               <input
-                id="to"
-                value={editTransportation ? editTransportation.to.name : ''}
+                id="edit-to"
+                value={editTransportation ? editTransportation.to : ''}
                 readOnly
                 style={{ padding: '5px', marginBottom: '10px', backgroundColor: '#f0f0f0' }}
               />
 
-              <label htmlFor="type">Type</label>
+              <label htmlFor="edit-type">Type</label>
               <select
-                id="type"
+                id="edit-type"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                style={{ padding: '5px', marginBottom: '20px' }}
+                style={{ padding: '5px', marginBottom: '15px' }}
               >
                 <option value="">Select Type</option>
                 <option value="FLIGHT">Flight</option>
@@ -226,6 +240,21 @@ const Transportations = () => {
                 <option value="SUBWAY">Subway</option>
                 <option value="UBER">Uber</option>
               </select>
+
+              <label style={{ marginBottom: '8px' }}>Days</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' }}>
+                {ALL_DAYS.map((day) => (
+                  <div key={day} style={{ display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      id={`edit-${day}`}
+                      checked={selectedDays[day]}
+                      onChange={() => handleCheckboxChange(day)}
+                    />
+                    <label htmlFor={`edit-${day}`} style={{ marginLeft: '5px' }}>{day.slice(0, 3)}</label>
+                  </div>
+                ))}
+              </div>
 
               <div>
                 <button
